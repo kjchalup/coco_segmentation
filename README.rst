@@ -18,7 +18,7 @@ I wanted to build a (relatively) simple neural net that could approach the probl
 
 The Neural Network
 ------------------
-My approach is inspired by Ross's work, as well as the older `Fully Convolutional Networks for Semantic Segmentation`_ by Trevor Darrell et al. Both use a pre-trained feature extractor to build upon, Zisserman's `VGG`_ network. I downloaded `Tensorflow`_ weights for VGG from https://github.com/machrisaa/tensorflow-vgg and, after a while of thinking, set up the following architecture:
+My approach is inspired by Ross's work, as well as the older `Fully Convolutional Networks for Semantic Segmentation`_ by Trevor Darrell et al. Both use a pre-trained feature extractor to build upon, Zisserman's `VGG`_ network. I downloaded `Tensorflow`_ weights for VGG from https://github.com/machrisaa/tensorflow-vgg and, after some thinking, set up the following architecture:
 
     .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/architecture.png
         :alt: Segmentation net architecture.
@@ -26,13 +26,13 @@ My approach is inspired by Ross's work, as well as the older `Fully Convolutiona
 
 First, the network pushes an image through the first 13 convolutional layers of VGG. At layer *pool1*, the image is downsampled from 224x224 to 112x112 pixels. At *pool2*, to 56x56 pixels. At *pool3*, to 28x28 pixels. The receptive field sizes increase until at *pool3* each pixel looks at about a quarter of the original image.
 
-Darell's work showed that a pixel-to-pixel segmentation can benefit from access to both low-level and high-level information. In the *upscale* layers, I use transpose convolutions to upscale each of *pool1*, *pool2* and *pool3* back to 224x224 images. Then, using a trick similar to `Inception`_'s bottleneck layers, I stack all these upscaled feature maps depth-wise and use 1x1 convolutions to reduce the depth in the *vgg_concat* layer:
+Darell's work showed that a pixel-to-pixel segmentation can benefit from access to both low-level and high-level information. In the *upscale* layers, I use transpose convolutions to upscale each of *pool1*, *pool2* and *pool3* back to 224x224 images: 
 
     .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/upscale.png
         :alt: Segmentation net architecture.
         :align: center
 
-The output of *vgg_concat* layer is a stack of 224x224 feature maps that have access to low-level, mid-level and high-level VGG features. On top of this layer, I put four layers of *batch normalization* followed by *relu* nonlinearity followed by 5x5 convolution:
+Then, using a trick similar to `Inception`_'s bottleneck layers, I stack all these upscaled feature maps depth-wise and use 1x1 convolutions to reduce the depth in the *vgg_concat* layer. The output of *vgg_concat* layer is a stack of 224x224 feature maps that have access to low-level, mid-level and high-level VGG features. On top of this layer, I put four layers of *batch normalization* followed by *relu* nonlinearity followed by 5x5 convolution:
 
     .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/convlayers.png
         :alt: Segmentation net architecture.
@@ -44,9 +44,9 @@ The VGG layers are kept constant, all the remaining layers are trainable. The fi
 .. code-block:: python
 
     def define_loss(self):                         
-        loss_pos = tf.reduce_mean(tf.nn.sigmoid(-.1 * 
-            tf.boolean_mask(self.y_pred, self.y_tf)))
-        loss_neg = tf.reduce_mean(tf.nn.sigmoid(.1 *
+        loss_pos = tf.reduce_mean(tf.nn.sigmoid( 
+            -tf.boolean_mask(self.y_pred, self.y_tf)))
+        loss_neg = tf.reduce_mean(tf.nn.sigmoid(
             tf.boolean_mask(self.y_pred, tf.logical_not(self.y_tf))))
         tf.summary.scalar('loss_pos', loss_pos)    
         tf.summary.scalar('loss_neg', loss_neg)    
@@ -70,10 +70,11 @@ This network took up my whole Titan X GPU with 12GB of RAM. After the loss satur
         :alt: MS COCO segmentation results.
         :align: center
 
-The results are not pretty, but are actually very good in terms of the IoU (intersection over union) of the segmentations w.r.t. the ground truth. The rectangular grid artifacts you see in some of the segmentation maps result from the transpose convolution upscaling. They could easily be smoothed post-hoc. A better solution would be to use larger transpose convolution filters. For example, the *pool3* layer is upscaled 32x and would ideally use filters of diameter larger than 32. Unforunately, a larger GPU would be necessary to store such large filters.
+The **Intersection over Union (IoU)** is a standard measure of segmentation results. It is exactly what it sounds like: the area of the intersection of the ground-truth mask and the prediction, divided by the union of the two. IoU of 1. is ideal. Averaged over 1000 test samples, our algorithm achieves **IoU ~ .2**. However, the pos / neg loss discrepancy suggests that it should have greater recall than recision. Indeed: average **Intersection(ground truth, pred) / Area(ground truth)**  of our algorithm is **85%**. A reasonable idea would be to retrain the network, putting more weight on loss_neg.
 
-It turns out training a reasonable segmentation network is not that hard! With some additional work (tailoring the architecture, running a larger net on multiple GPUs, smoothing the results etc) the network would likely approach human-level performance on this challenging dataset.
-   
+The rectangular grid artifacts in some of the segmentation maps result from the transpose convolution upscaling. They could easily be smoothed post-hoc. A better solution would be to use larger transpose convolution filters. For example, the *pool3* layer is upscaled 32x and would ideally use filters of diameter larger than 32. Unforunately, a larger GPU would be necessary to store such large filters.
+  
+.. _Inception: https://arxiv.org/abs/1512.00567  
 .. _VGG: https://arxiv.org/pdf/1409.1556.pdf
 .. _recent results: https://arxiv.org/pdf/1703.06870.pdf
 .. _MS COCO: http://mscoco.org/
@@ -81,7 +82,7 @@ It turns out training a reasonable segmentation network is not that hard! With s
 .. _numpy: http://www.numpy.org/
 .. _scikit-learn: http://scikit-learn.org/
 .. _TensorFlow: https://www.tensorflow.org/
-.. _TensorBoard: https://www.youtube.com/watch?v=eBbEDRsCmv4
+.. _Tensorboard: https://www.youtube.com/watch?v=eBbEDRsCmv4
 .. _Keras: https://keras.io/
 .. _nn.py: neural_networks/nn.py
 .. _mtn.py: neural_networks/mtn.py
