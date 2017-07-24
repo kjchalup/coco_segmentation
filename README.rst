@@ -12,7 +12,7 @@ are often either tiny, or zoomed-in on so much that only a part of the object is
         :alt: Example MS COCO images of 'person'.
         :align: center
 
-In red, I marked particularly problematic instances. Is a hand or shoes a 'person', for example? In addition, note that sometimes (first image, first row) a reflection of a 'person' counts as 'person'. Sometimes (fourth image, first row) it doesn't. 
+In red, I marked particularly problematic instances. Is a hand or shoes a 'person', for example? In addition, note that sometimes (first image, first row) a reflection of a 'person' counts as 'person'. Sometimes (fourth image, first row) it doesn't. Keeping this in mind, we should be suspicious should any algorithm achieve perfect agreement with the masks.
 
 I wanted to build a (relatively) simple neural net that could approach the problem of segmenting out 'person' from such images. I was inspired by Ross Girschick's `recent results`_ on joint detection / classification /segmentation: whereas Ross shows encouraging results, his article quietly ignores problematic cases like the above. Since I wanted to keep things simple, I restricted the task to segemtnation of 'person'. 
 
