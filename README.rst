@@ -1,113 +1,44 @@
-Neural nets in `TensorFlow`_.
+`MS COCO`_ segmentation using deep fully-convolutional networks.
 ##############################
 
 .. image:: https://img.shields.io/badge/License-GPL%20v3-blue.svg
     :target: http://www.gnu.org/licenses/gpl-3.0
     :alt: GPL 3.0 License
 
-`TensorFlow`_ is a relatively low-level framework for building and executing
-computational graphs. There are higher-level frameworks built on top of `TensorFlow`_ that implement neural
-networks (e.g. `Keras`_).
+`MS COCO`_ is by all means a challenging computer vision dataset. There are often multiple instances of multiple object classes in each image (that's why it's called "common objects *in context*".) Objects occlude each other, and
+are often either tiny, or zoomed-in on so much that only a part of the object is visible. Below are randomly picked examples of thirty-two MS COCO images containing 'person'. I rescaled the images to 224x224 pixels, and marked in red particularily controversial annotations of 'person':
 
-This repository implements one such high-level framework.
-In research, I need low-level control over the computational graph,
-but I also often reuse basic neural net architectures. This makes it
-inconvenient to use pre-existing frameworks (lack of low-level control) --
-but I don't want to reimplement basic nn components each time.
-
-Why would you use this repository?
-
-    * You are a Tensorflow beginner, and want to see how to implement stuff. I certainly learned a lot looking at other people's tf code!
-    * If you want to use my implementations in your own projects please do, though you'll probably learn more and get best results if you do your own coding.
-
-Usage
------
-I tried to mimic the `scikit-learn`_ interface. You fit a network
-using nn.fit, and predict with nn.predict. In some cases
-there are other useful methods, e.g. GANs can gan.sample().
-See individual module documentation for more details.
-
-Each module's usage is exemplified in its __main__ part.
-For example, `fcnn.py`_ contains a section which uses a Fully Convolutional
-Neural Network (FCNN) with batch normalization and residual connections to denoise MNIST images:
-
-.. code-block:: python
-
-    [...] # Code that defines the FCNN.
-    import matplotlib.pyplot as plt
-    from tensorflow.examples.tutorials.mnist import input_data
-    mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-    ims_tr = mnist.train.images.reshape(-1, 28, 28, 1)
-    ims_ts = mnist.test.images.reshape(-1, 28, 28, 1)
-
-    # Create a dataset of MNIST with random binary noise as inputs
-    # and the original digits as outputs.
-    X_tr = ims_tr + np.abs(np.random.randn(*ims_tr.shape) * .1)
-    Y_tr = ims_tr
-    X_ts = ims_ts + np.abs(np.random.randn(*ims_ts.shape) * .1)
-    Y_ts = ims_ts
-
-    # Define the graph.
-    fcnn = FCNN(x_shape = ims_tr.shape[1:])
-
-    # Create a Tensorflow session and train the net.
-    with tf.Session() as sess:
-        # Define the Tensorflow session, and its initializer op.
-        sess.run(tf.global_variables_initializer())
-
-        # Use a writer object for Tensorboard visualization.
-        summary = tf.summary.merge_all()
-        writer = tf.summary.FileWriter('logs/fcnn')
-        writer.add_graph(sess.graph)
-
-        # Fit the net.
-        fcnn.fit(X_tr, Y_tr, sess, epochs=100, writer=writer, summary=summary)
-
-        # Predict.
-        Y_pred = fcnn.predict(X_ts, sess).reshape(-1, 28, 28)
-    
-        [...] # More code that plots the results.
-
-This trains an FCNN. The default settings set up a tiny network, with the advantage that it trains in less than a minute on a Titan X GPU, and good enough for testing the architecture. You can use `Tensorboard`_ to visualize the graph. For example, the image below illustrates the graph and zooms onto one specific batch norm -- residual layer:
-
-    .. image:: https://github.com/kjchalup/neural_networks/blob/master/fcnn_graph.png
-        :alt: Example FCNN graph.
+    .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/coco_examples.png
+        :alt: Example MS COCO images of 'person'.
         :align: center
 
-Our FCNN indeed learned to denoise noisy MNIST pretty well:
+I wanted to build a (relatively) simple neural net that could approach the problem of segmenting out 'person' from `MS COCO`_ images. I was inspired by `Ross Girschick`_'s recent results on joint detection / classification /segmentation on the dataset: segmentation on this dataset is possible! Since I wanted to keep things simple, I stuck just to segmentation of one (albeit probably the most difficult) class of instances, 'person'. 
 
-    .. image:: https://github.com/kjchalup/neural_networks/blob/master/smoothmnist.png
-        :alt: Example NN training output.
-        :align: center
-        
-You can also use `Tensorboard`_ to visualize training and validation validation loss, and all kinds of other training stats:
+The Neural Network
+------------------
+My approach is inspired by Ross's work, as well as the older `Fully Convolutional Networks for Semantic Segmentation`_ by Trevor Darrell et. al. Both use a pre-trained feature extractor to build upon, the `VGG`_ network. I downloaded `Tensorflow`_ weights for VGG from https://github.com/machrisaa/tensorflow-vgg and set up my segmentation net as follows:
 
-    .. image:: https://github.com/kjchalup/neural_networks/blob/master/tr_loss.png
-        :alt: Validation loss.
-        :align: center
-        
-    .. image:: https://github.com/kjchalup/neural_networks/blob/master/val_loss.png
-        :alt: Validation loss.
+    .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/architecture1.png
+        :alt: Segmentation net architecture.
         :align: center
 
-Implemented Methods
--------------------
-At the moment, the reposity contains the following methods:
-  
-  * `nn.py`_: Multi-layer perceptron (MLP) with Dropout (`arXiv:1207.0580`_).
-  * `nn.py`_: Residual Network (`arXiv:1512.03385`_).
-  * `nn.py`_: Highway Network (`arXiv:1505.00387`_).
-  * `gan.py`_: Least-Squares Generative Adversarial Network (`arXiv:1611.04076v2`_, in my experience the best GAN, though doesn't a convergence criterion like Wasserstein GANs).  
-  * `cgan.py`_: Conditional Least-Squares Generative Adversarial Network (`arXiv:1411.1784`_)
-  * `mtn.py`_: Multi-Task Networks (my own creation) -- learn from multiple datasets with related inputs but different output tasks.
-  * `fcnn.py`_: Fully-convolutional neural nets.
+First, [describe the VGG layers].
 
-Requirements
-------------
-Everything should work with Python 2 and 3.
+On top of that [describe the fully conv layers].
 
-    * `NumPy`_ >= 1.12
-    * `TensorFlow`_ >= 1.0.0
+The loss [describe the loss].
+
+Results and Conclusion
+-------
+This network took up my whole Titan X GPU with 12GB of RAM. After several hours, the sigmoid loss saturated at about .2. I chose not to train further, as the results were satisfactory:
+
+    .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/results.png
+        :alt: MS COCO segmentation results.
+        :align: center
+
+The results are not pretty, but are actually very good in terms of the IoU (intersection over union) of the segmentations w.r.t. the ground truth. [explain why not pretty].
+
+It turns out training a reasonable segmentation network is not that hard! With some additional work (tailoring the architecture, running a larger net on multiple GPUs, smoothing the results etc) the network would likely approach human-level performance on this challenging dataset.
    
 .. _numpy: http://www.numpy.org/
 .. _scikit-learn: http://scikit-learn.org/
