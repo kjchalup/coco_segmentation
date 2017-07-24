@@ -97,8 +97,16 @@ class SegmentNN(FCNN):
         return y_pred
 
     def define_loss(self):
-        return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=self.y_tf, logits=self.y_pred))
+        loss_pos = tf.reduce_mean(tf.nn.sigmoid(-.1 * 
+            tf.boolean_mask(self.y_pred, self.y_tf)))
+        loss_neg = tf.reduce_mean(tf.nn.sigmoid(.1 *
+            tf.boolean_mask(self.y_pred, tf.logical_not(self.y_tf))))
+        tf.summary.scalar('loss_pos', loss_pos)
+        tf.summary.scalar('loss_neg', loss_neg)
+        return loss_pos + loss_neg
+        # If you want to use cross-entropy instead:
+        #return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+        #    labels=self.y_tf, logits=self.y_pred))
 
 
 if __name__ == "__main__":
@@ -122,7 +130,8 @@ if __name__ == "__main__":
     with tf.Session() as sess:
         # Define the Tensorflow session, and its initializer op.
         sess.run(tf.global_variables_initializer())
-        fcnn.saver.restore(sess, 'logs/vgg_segment_ce2')
+        # UNCOMMENT THIS TO LOAD PRE-SAVED WEIGHRS
+        #fcnn.saver.restore(sess, 'logs/weights')
 
         # Use a writer object for Tensorboard visualization.
         summary = tf.summary.merge_all()
@@ -130,8 +139,8 @@ if __name__ == "__main__":
         writer.add_graph(sess.graph)
 
         # Fit the net.
-        #fcnn.fit(sess, fetch_data, epochs=10000,
-        #    batch_size=batch_size, lr=0.1, writer=writer, summary=summary)
+        fcnn.fit(sess, fetch_data, epochs=10000,
+            batch_size=batch_size, lr=0.1, writer=writer, summary=summary)
 
         # Test the network.
         np.random.seed(1)
