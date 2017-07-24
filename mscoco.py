@@ -3,6 +3,9 @@
 Krzysztof Chalupka, 2017.
 """
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import skimage.transform
 import skimage.color
 import skimage.io as io
@@ -102,3 +105,22 @@ def get_coco_batch(category, batch_size, im_size, data_type='train'):
         masks[img_id, :, :, 0] = mask
 
     return ims, masks
+
+
+if __name__ == "__main__":
+    np.random.seed(1)
+    images, masks = get_coco_batch(category='person',
+        batch_size=32, im_size=[224, 224], data_type='test')
+
+    plt.figure(figsize=(24, 24))
+    for im_id in range(32):
+        plt.subplot2grid((8, 8), (2 * (im_id / 8), im_id % 8))
+        plt.axis('off')
+        plt.imshow(images[im_id], interpolation='nearest', vmin=0, vmax=1)
+
+        plt.subplot2grid((8, 8), (2 * (im_id / 8) + 1, im_id % 8))
+        plt.axis('off')
+        plt.imshow(images[im_id], interpolation='nearest', vmin=0, vmax=1)
+        plt.imshow(masks[im_id].squeeze() > .5, cmap='gray', alpha=.8)
+
+    plt.savefig('coco_examples.png')

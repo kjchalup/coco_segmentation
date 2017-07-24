@@ -111,7 +111,7 @@ if __name__ == "__main__":
     def fetch_data(batch_size, data_type):
         ims, masks = get_coco_batch(category='person', batch_size=batch_size,
             im_size=im_shape, data_type=data_type)
-        return ims, masks.astype(bool)
+        return ims, masks
 
     # Define the graph.
     y_tf = tf.placeholder(tf.float32, [None, im_shape[0], im_shape[1], 1])
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     with tf.Session() as sess:
         # Define the Tensorflow session, and its initializer op.
         sess.run(tf.global_variables_initializer())
-        #fcnn.saver.restore(sess, 'logs/weights')
+        fcnn.saver.restore(sess, 'logs/vgg_segment_ce2')
 
         # Use a writer object for Tensorboard visualization.
         summary = tf.summary.merge_all()
@@ -130,29 +130,24 @@ if __name__ == "__main__":
         writer.add_graph(sess.graph)
 
         # Fit the net.
-        fcnn.fit(sess, fetch_data, epochs=10000,
-            batch_size=batch_size, lr=0.1, writer=writer, summary=summary)
+        #fcnn.fit(sess, fetch_data, epochs=10000,
+        #    batch_size=batch_size, lr=0.1, writer=writer, summary=summary)
 
         # Test the network.
         np.random.seed(1)
-        ims_ts, masks_ts = fetch_data(batch_size, 'test')
+        ims_ts, masks_ts = fetch_data(32, 'test')
         Y_pred = fcnn.predict(ims_ts, sess)
 
     # Show some results.
-    plt.figure(figsize=(24, 9))
-    for im_id_id, im_id in enumerate(range(batch_size-8, batch_size)):
-        print(im_id)
-        plt.subplot2grid((3, 8), (0, im_id_id))
+    plt.figure(figsize=(24, 24))
+    for im_id in range(32):
+        plt.subplot2grid((8, 8), (2 * (im_id / 8), im_id % 8))
         plt.axis('off')
         plt.imshow(ims_ts[im_id], interpolation='nearest', vmin=0, vmax=1)
 
-        plt.subplot2grid((3, 8), (1, im_id_id))
+        plt.subplot2grid((8, 8), (2 * (im_id / 8) + 1, im_id % 8))
         plt.axis('off')
         plt.imshow(ims_ts[im_id], interpolation='nearest', vmin=0, vmax=1)
         plt.imshow(Y_pred[im_id].squeeze() > .5, cmap='gray', alpha=.8)
 
-        plt.subplot2grid((3, 8), (2, im_id_id))
-        plt.axis('off')
-        plt.imshow(ims_ts[im_id], interpolation='nearest', vmin=0, vmax=1)
-        plt.imshow(masks_ts[im_id].squeeze() > .5, cmap='gray', alpha=.8)
     plt.savefig('segmentation_results.png')
