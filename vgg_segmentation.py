@@ -119,10 +119,10 @@ if __name__ == "__main__":
     def fetch_data(batch_size, data_type):
         ims, masks = get_coco_batch(category='person', batch_size=batch_size,
             im_size=im_shape, data_type=data_type)
-        return ims, masks
+        return ims, masks.astype(bool)
 
     # Define the graph.
-    y_tf = tf.placeholder(tf.float32, [None, im_shape[0], im_shape[1], 1])
+    y_tf = tf.placeholder(tf.bool, [None, im_shape[0], im_shape[1], 1])
     fcnn = SegmentNN(x_shape = im_shape + [3], y_tf=y_tf, y_channels=1,
         res=False, save_fname='logs/weights')
 
@@ -132,6 +132,7 @@ if __name__ == "__main__":
         sess.run(tf.global_variables_initializer())
         # UNCOMMENT THIS TO LOAD PRE-SAVED WEIGHRS
         #fcnn.saver.restore(sess, 'logs/weights')
+        fcnn.saver.restore(sess, 'logs/vgg_segment_ce2')
 
         # Use a writer object for Tensorboard visualization.
         summary = tf.summary.merge_all()
@@ -139,13 +140,30 @@ if __name__ == "__main__":
         writer.add_graph(sess.graph)
 
         # Fit the net.
-        fcnn.fit(sess, fetch_data, epochs=10000,
-            batch_size=batch_size, lr=0.1, writer=writer, summary=summary)
+        #fcnn.fit(sess, fetch_data, epochs=10000,
+        #    batch_size=batch_size, lr=0.1, writer=writer, summary=summary)
 
         # Test the network.
         np.random.seed(1)
         ims_ts, masks_ts = fetch_data(32, 'test')
         Y_pred = fcnn.predict(ims_ts, sess)
+
+        # Compute the IoU over 1000 test points.
+        iou = 0
+        iou_correct = 0
+        iou_recall = 0
+        for test_batch in range(10):
+            ims, masks = fetch_data(100, 'test')
+            ypred = fcnn.predict(ims, sess)
+            ious = ((ypred * masks).sum(axis=(1, 2)) /
+                    (ypred.astype(bool) + masks).sum(axis=(1, 2)).astype(float))
+            iou += (ypred * masks).sum() / float((ypred.astype(bool) + masks).sum())
+            iou_correct += (ious > .5).sum()
+            iou_recall += (ypred * masks).sum() / float(masks.sum())
+            
+        print('Avg IoU = {}. IoU > .5 fraction = {}, IoU recall = {}'.format(
+            iou / 10., iou_correct / 1000., iou_recall / 10.))
+
 
     # Show some results.
     plt.figure(figsize=(24, 24))
