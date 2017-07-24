@@ -6,13 +6,13 @@
     :alt: GPL 3.0 License
 
 `MS COCO`_ is a challenging computer vision dataset that contains segmentation, bounding box, and caption annotations. There are often multiple instances of multiple object classes in each image (that's why it's called "common objects *in context*".) Objects occlude each other, and
-are often either tiny, or zoomed-in on so much that only a part of the object is visible. Below are randomly picked examples of MS COCO images containing 'person', and the ground-truth segmentation masks. I rescaled the images to 224x224 pixels.
+are often either tiny, or zoomed-in on so much that only a part of the object is visible. Below are randomly picked examples of MS COCO images containing 'person', and the ground-truth segmentation masks. It's best to download the figure and inspect it full-res. All the images are rescaled to 224x224 pixels.
 
     .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/coco_examples.png
         :alt: Example MS COCO images of 'person'.
         :align: center
 
-In red, I marked particularly problematic instances. Is a hand or shoes a 'person', for example?
+In red, I marked particularly problematic instances. Is a hand or shoes a 'person', for example? In addition, note that sometimes (first image, first row) a reflection of a 'person' counts as 'person'. Sometimes (fourth image, first row) it doesn't. 
 
 I wanted to build a (relatively) simple neural net that could approach the problem of segmenting out 'person' from such images. I was inspired by Ross Girschick's `recent results`_ on joint detection / classification /segmentation: whereas Ross shows encouraging results, his article quietly ignores problematic cases like the above. Since I wanted to keep things simple, I restricted the task to segemtnation of 'person'. 
 
@@ -70,9 +70,11 @@ This network took up my whole Titan X GPU with 12GB of RAM. After the loss satur
         :alt: MS COCO segmentation results.
         :align: center
 
-The **Intersection over Union (IoU)** is a standard measure of segmentation results. It is exactly what it sounds like: the area of the intersection of the ground-truth mask and the prediction, divided by the union of the two. IoU of 1. is ideal. Averaged over 1000 test samples, our algorithm achieves **IoU ~ .2**. However, the pos / neg loss discrepancy suggests that it should have greater recall than recision. Indeed: average **Intersection(ground truth, pred) / Area(ground truth)**  of our algorithm is **85%**. A reasonable idea would be to retrain the network, putting more weight on loss_neg.
-
-The rectangular grid artifacts in some of the segmentation maps result from the transpose convolution upscaling. They could easily be smoothed post-hoc. A better solution would be to use larger transpose convolution filters. For example, the *pool3* layer is upscaled 32x and would ideally use filters of diameter larger than 32. Unforunately, a larger GPU would be necessary to store such large filters.
+Some remarks regarding the results:
+    * The **Intersection over Union (IoU)** is a standard measure of segmentation results. It is exactly what it sounds like: the area of the intersection of the ground-truth mask and the prediction, divided by the union of the two. IoU of 1. is ideal. Averaged over 1000 test samples, our algorithm achieves **IoU ~ .2**. 
+    * However, the pos / neg loss discrepancy suggests that it should have greater recall than precision. Indeed: average **Intersection(ground truth, pred) / Area(ground truth)**  of our algorithm is **85%**. That is, it detects 85% of 'person' pixels. A reasonable idea would be to retrain the network, putting more weight on loss_neg to shrink the false positive area.
+    * The network doesn't seem to have much trouble detecting small instances, or instances of only parts of 'person'.
+    * The rectangular grid artifacts in some of the segmentation maps result from the transpose convolution upscaling. They could easily be smoothed post-hoc. A better solution would be to use larger transpose convolution filters. For example, the *pool3* layer is upscaled 32x and would ideally use filters of diameter larger than 32. Unforunately, a larger GPU would be necessary to store such large filters.
   
 .. _Inception: https://arxiv.org/abs/1512.00567  
 .. _VGG: https://arxiv.org/pdf/1409.1556.pdf
