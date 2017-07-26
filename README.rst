@@ -8,7 +8,7 @@
 
 Short description
 -------------
-A fully convolutional neural net attached to multiple layers of VGG-16 achieves very good results on the MS COCO segmentation task on the 'person' class.
+A fully convolutional neural net attached to multiple layers of VGG-16 achieves very good results on the MS COCO segmentation task on the 'person' class. Scroll all the way down to see example segmentations produced by the network.
 
 Long description
 ----------
@@ -78,7 +78,7 @@ This network took up my whole Titan X GPU with 12GB of RAM. After the loss satur
         :align: center
 
 Some remarks regarding the results:
-    * The **Intersection over Union (IoU)** is a standard measure of segmentation results. On test data, our algorithm achieves mean **IoU ~ .56** (after thresholding the nn output at .5). In addition, the **fraction of images with IoU greater than .5 is .58**. Pretty good! Compare with the `state-of-the-art results`_: 
+    * The **Intersection over Union (IoU)** is a standard measure of segmentation results. On test data, our algorithm achieves mean **IoU ~ .56** (after thresholding the nn output at .5). In addition, the **fraction of images with IoU greater than .5 is .58**. Pretty good! Compare with the `state-of-the-art results`_.
     * The pos / neg loss discrepancy suggests that it should have greater recall than precision. Indeed: average **Intersection(ground truth, pred) / Area(ground truth)**  of our algorithm is **.85**. A reasonable idea would be to retrain the network, putting more weight on loss_neg to shrink the false positive area.
     * The network doesn't seem to have much trouble detecting small instances, or instances of only parts of 'person'.
     * The rectangular grid artifacts in some of the segmentation maps result from the transpose convolution upscaling. They could easily be smoothed post-hoc. A better solution would be to use larger transpose convolution filters. For example, the *pool3* layer is upscaled 32x and would ideally use filters of diameter larger than 32. Unforunately, a larger GPU would be necessary to store such large filters.
