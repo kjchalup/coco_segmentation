@@ -154,7 +154,7 @@ if __name__ == "__main__":
         iou_recall = 0
         for test_batch in range(10):
             ims, masks = fetch_data(100, 'test')
-            ypred = fcnn.predict(ims, sess)
+            ypred = fcnn.predict(ims, sess) > .5
             ious = ((ypred * masks).sum(axis=(1, 2)) /
                     (ypred.astype(bool) + masks).sum(axis=(1, 2)).astype(float))
             iou += (ypred * masks).sum() / float((ypred.astype(bool) + masks).sum())
