@@ -24,15 +24,15 @@ My approach is inspired by Ross's work, as well as the older `Fully Convolutiona
         :alt: Segmentation net architecture.
         :align: center
 
-First, the network pushes an image through the first 13 convolutional layers of VGG. At layer *pool1*, the image is downsampled from 224x224 to 112x112 pixels. At *pool2*, to 56x56 pixels. At *pool3*, to 28x28 pixels. The receptive field sizes increase until at *pool3* each pixel looks at about a quarter of the original image.
+First, the network pushes an image through multiple layers of VGG. At layer *pool1*, the image is downsampled from 224x224 to 112x112 pixels. At *pool3*, to 28x28 pixels. At *pool5*, to 7x7 pixels. The receptive field sizes increase until at *pool7* each pixel looks at most of the original image.
 
-Darell's work showed that a pixel-to-pixel segmentation can benefit from access to both low-level and high-level information. In the *upscale* layers, I use transpose convolutions to upscale each of *pool1*, *pool2* and *pool3* back to 224x224 images: 
+Darell's work showed that a pixel-to-pixel segmentation can benefit from access to both low-level and high-level information. In the *upscale* layers, I use transpose convolutions to upscale each of *pool1*, *pool3* and *pool5* back to 224x224 images: 
 
     .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/upscale.png
         :alt: Segmentation net architecture.
         :align: center
 
-Then, using a trick similar to `Inception`_'s bottleneck layers, I stack all these upscaled feature maps depth-wise and use 1x1 convolutions to reduce the depth in the *vgg_concat* layer. The output of *vgg_concat* layer is a stack of 224x224 feature maps that have access to low-level, mid-level and high-level VGG features. On top of this layer, I put four layers of *batch normalization* followed by *relu* nonlinearity followed by 5x5 convolution:
+Then, using a trick similar to `Inception`_'s bottleneck layers, I stack all these upscaled feature maps depth-wise.. The output of *vgg_concat* layer is a stack of 224x224 feature maps that have access to low-level, mid-level and high-level VGG features. On top of this layer, I put four layers of *batch normalization* followed by *relu* nonlinearity followed by 5x5 convolution:
 
     .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/convlayers.png
         :alt: Segmentation net architecture.
@@ -64,7 +64,7 @@ These training loss curves show that the positive loss saturates at a lower leve
 
 Results and Conclusion
 -------
-This network took up my whole Titan X GPU with 12GB of RAM. After the loss saturated I chose not to train further, as the results were satisfactory:
+This network took up a whole Titan X GPU with 12GB of RAM. After the loss saturated I chose not to train further, as the results were satisfactory:
 
     .. image:: https://github.com/kjchalup/coco_segmentation/blob/master/segmentation_results.png
         :alt: MS COCO segmentation results.
